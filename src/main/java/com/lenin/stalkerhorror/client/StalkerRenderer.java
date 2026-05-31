@@ -1,5 +1,6 @@
 package com.lenin.stalkerhorror.client;
 
+import com.lenin.stalkerhorror.StalkerHorrorMod;
 import com.lenin.stalkerhorror.entity.StalkerEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.HumanoidModel;
@@ -10,7 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 
 public class StalkerRenderer extends MobRenderer<StalkerEntity, HumanoidModel<StalkerEntity>> {
     private static final ResourceLocation TEXTURE =
-            new ResourceLocation("minecraft", "textures/entity/zombie/zombie.png");
+            new ResourceLocation(StalkerHorrorMod.MODID, "textures/entity/stalker.png");
 
     public StalkerRenderer(EntityRendererProvider.Context context) {
         super(context, new HumanoidModel<>(context.bakeLayer(ModelLayers.ZOMBIE)), 0.5F);
