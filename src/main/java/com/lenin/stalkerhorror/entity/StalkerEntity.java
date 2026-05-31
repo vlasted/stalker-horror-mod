@@ -3,6 +3,11 @@ package com.lenin.stalkerhorror.entity;
 import com.lenin.stalkerhorror.entity.ai.ManipulateBlockGoal;
 import com.lenin.stalkerhorror.entity.ai.DarkenAreaGoal;
 import net.minecraft.core.BlockPos;
+import com.lenin.stalkerhorror.entity.ai.CreepySoundGoal;
+import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
@@ -31,6 +36,7 @@ public class StalkerEntity extends Monster {
     private ItemStack stolenBlockItem = ItemStack.EMPTY;
     private int blockManipulationCooldown;
     private int darkenCooldown;
+    private int creepySoundCooldown;
 
     public StalkerEntity(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
@@ -43,6 +49,7 @@ public class StalkerEntity extends Monster {
 
         this.goalSelector.addGoal(1, new VanishWhenTooCloseGoal(this, 3.0D, 12.0D));
         this.goalSelector.addGoal(2, new FreezeWhenSeenGoal(this, 24.0D, 0.93D));
+        this.goalSelector.addGoal(3, new CreepySoundGoal(this, 28.0D));
         this.goalSelector.addGoal(3, new DarkenAreaGoal(this, 18.0D));
         this.goalSelector.addGoal(3, new ManipulateBlockGoal(this, 18.0D));
         this.goalSelector.addGoal(3, new StalkPlayerGoal(this, 0.85D, 5.0D, 28.0D));
@@ -67,6 +74,10 @@ public class StalkerEntity extends Monster {
         if (this.darkenCooldown > 0) {
             this.darkenCooldown--;
         }
+
+        if (this.creepySoundCooldown > 0) {
+            this.creepySoundCooldown--;
+        }
     }
 
     @Override
@@ -86,6 +97,7 @@ public class StalkerEntity extends Monster {
         compound.putInt("VanishCooldown", this.vanishCooldown);
         compound.putInt("BlockManipulationCooldown", this.blockManipulationCooldown);
         compound.putInt("DarkenCooldown", this.darkenCooldown);
+        compound.putInt("CreepySoundCooldown", this.creepySoundCooldown);
 
         if (!this.stolenBlockItem.isEmpty()) {
             CompoundTag stolenBlockTag = new CompoundTag();
@@ -101,6 +113,7 @@ public class StalkerEntity extends Monster {
         this.vanishCooldown = compound.getInt("VanishCooldown");
         this.blockManipulationCooldown = compound.getInt("BlockManipulationCooldown");
         this.darkenCooldown = compound.getInt("DarkenCooldown");
+        this.creepySoundCooldown = compound.getInt("CreepySoundCooldown");
 
         if (compound.contains("StolenBlockItem")) {
             this.stolenBlockItem = ItemStack.of(compound.getCompound("StolenBlockItem"));
@@ -262,6 +275,50 @@ public class StalkerEntity extends Monster {
                 || state.is(Blocks.REDSTONE_WALL_TORCH)
                 || state.is(Blocks.LANTERN)
                 || state.is(Blocks.SOUL_LANTERN);
+    }
+
+    public boolean canPlayCreepySound() {
+        return this.creepySoundCooldown <= 0;
+    }
+
+    public void resetCreepySoundCooldown() {
+        this.creepySoundCooldown = 240 + this.getRandom().nextInt(361);
+    }
+
+    public void playCreepySoundNearPlayer(ServerLevel serverLevel, Player player) {
+        BlockPos playerPos = player.blockPosition();
+
+        int xOffset = this.getRandom().nextInt(17) - 8;
+        int yOffset = this.getRandom().nextInt(5) - 2;
+        int zOffset = this.getRandom().nextInt(17) - 8;
+
+        BlockPos soundPos = playerPos.offset(xOffset, yOffset, zOffset);
+
+        SoundEvent sound = this.getRandomCreepySound();
+
+        float volume = 0.35F + this.getRandom().nextFloat() * 0.35F;
+        float pitch = 0.45F + this.getRandom().nextFloat() * 0.35F;
+
+        serverLevel.playSound(
+                null,
+                soundPos,
+                sound,
+                SoundSource.HOSTILE,
+                volume,
+                pitch
+        );
+    }
+
+    private SoundEvent getRandomCreepySound() {
+        int soundIndex = this.getRandom().nextInt(5);
+
+        return switch (soundIndex) {
+            case 0 -> SoundEvents.AMBIENT_CAVE.value();
+            case 1 -> SoundEvents.ENDERMAN_STARE;
+            case 2 -> SoundEvents.ENDERMAN_AMBIENT;
+            case 3 -> SoundEvents.ZOMBIE_AMBIENT;
+            default -> SoundEvents.SKELETON_AMBIENT;
+        };
     }
 
 }
