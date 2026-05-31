@@ -2,6 +2,7 @@ package com.lenin.stalkerhorror;
 
 import com.lenin.stalkerhorror.entity.StalkerEntity;
 import com.lenin.stalkerhorror.registry.ModEntities;
+import com.lenin.stalkerhorror.registry.ModItems;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
@@ -22,9 +23,11 @@ public class StalkerHorrorMod {
         IEventBus modEventBus = context.getModEventBus();
 
         ModEntities.register(modEventBus);
+        ModItems.register(modEventBus);
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerEntityAttributes);
+        modEventBus.addListener(ModItems::addCreative);
 
         MinecraftForge.EVENT_BUS.register(this);
     }

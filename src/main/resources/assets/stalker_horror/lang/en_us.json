@@ -1,5 +1,7 @@
 {
   "itemGroup.stalker_horror": "Stalker Horror Mod",
   "item.stalker_horror.example_item": "Example Item",
-  "block.stalker_horror.example_block": "Example Block"
+  "block.stalker_horror.example_block": "Example Block",
+  "item.stalker_horror.stalker_spawn_egg": "Stalker Spawn Egg",
+  "entity.stalker_horror.stalker": "Stalker"
 }
