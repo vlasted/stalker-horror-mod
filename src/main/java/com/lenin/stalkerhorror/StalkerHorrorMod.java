@@ -1,4 +1,4 @@
-package com.example.examplemod;
+package com.lenin.stalkerhorror;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
@@ -18,6 +18,7 @@ import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -28,12 +29,9 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import org.slf4j.Logger;
 
-// The value here should match an entry in the META-INF/mods.toml file
-@Mod(ExampleMod.MODID)
-public class ExampleMod
-{
-    // Define mod id in a common place for everything to reference
-    public static final String MODID = "examplemod";
+@Mod(StalkerHorrorMod.MODID)
+public class StalkerHorrorMod {
+    public static final String MODID = "stalker_horror";
     // Directly reference a slf4j logger
     private static final Logger LOGGER = LogUtils.getLogger();
     // Create a Deferred Register to hold Blocks which will all be registered under the "examplemod" namespace
@@ -60,7 +58,7 @@ public class ExampleMod
                 output.accept(EXAMPLE_ITEM.get()); // Add the example item to the tab. For your own tabs, this method is preferred over the event
             }).build());
 
-    public ExampleMod(FMLJavaModLoadingContext context)
+    public StalkerHorrorMod(FMLJavaModLoadingContext context)
     {
         IEventBus modEventBus = context.getModEventBus();
 
