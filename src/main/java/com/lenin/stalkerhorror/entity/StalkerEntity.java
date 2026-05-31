@@ -3,6 +3,7 @@ package com.lenin.stalkerhorror.entity;
 import com.lenin.stalkerhorror.entity.ai.FreezeWhenSeenGoal;
 import com.lenin.stalkerhorror.entity.ai.ObservePlayerGoal;
 import com.lenin.stalkerhorror.entity.ai.StalkPlayerGoal;
+import com.lenin.stalkerhorror.entity.ai.VanishWhenTooCloseGoal;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -13,20 +14,41 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.level.Level;
 
 public class StalkerEntity extends Monster {
+    private int vanishCooldown;
+
     public StalkerEntity(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
+        this.vanishCooldown = 160;
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
 
-        this.goalSelector.addGoal(1, new FreezeWhenSeenGoal(this, 24.0D, 0.93D));
-        this.goalSelector.addGoal(2, new StalkPlayerGoal(this, 0.85D, 5.0D, 28.0D));
-        this.goalSelector.addGoal(3, new ObservePlayerGoal(this, 32.0D));
+        this.goalSelector.addGoal(1, new VanishWhenTooCloseGoal(this, 3.0D, 12.0D));
+        this.goalSelector.addGoal(2, new FreezeWhenSeenGoal(this, 24.0D, 0.93D));
+        this.goalSelector.addGoal(3, new StalkPlayerGoal(this, 0.85D, 5.0D, 28.0D));
+        this.goalSelector.addGoal(4, new ObservePlayerGoal(this, 32.0D));
 
         this.goalSelector.addGoal(7, new RandomStrollGoal(this, 0.45D));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+
+        if (this.vanishCooldown > 0) {
+            this.vanishCooldown--;
+        }
+    }
+
+    public boolean canVanish() {
+        return this.vanishCooldown <= 0;
+    }
+
+    public void resetVanishCooldown() {
+        this.vanishCooldown = 160;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
