@@ -1,6 +1,7 @@
 package com.lenin.stalkerhorror.entity;
 
 import com.lenin.stalkerhorror.entity.ai.ManipulateBlockGoal;
+import com.lenin.stalkerhorror.entity.ai.DarkenAreaGoal;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -29,6 +30,7 @@ public class StalkerEntity extends Monster {
     private int vanishCooldown;
     private ItemStack stolenBlockItem = ItemStack.EMPTY;
     private int blockManipulationCooldown;
+    private int darkenCooldown;
 
     public StalkerEntity(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
@@ -41,6 +43,7 @@ public class StalkerEntity extends Monster {
 
         this.goalSelector.addGoal(1, new VanishWhenTooCloseGoal(this, 3.0D, 12.0D));
         this.goalSelector.addGoal(2, new FreezeWhenSeenGoal(this, 24.0D, 0.93D));
+        this.goalSelector.addGoal(3, new DarkenAreaGoal(this, 18.0D));
         this.goalSelector.addGoal(3, new ManipulateBlockGoal(this, 18.0D));
         this.goalSelector.addGoal(3, new StalkPlayerGoal(this, 0.85D, 5.0D, 28.0D));
         this.goalSelector.addGoal(4, new ObservePlayerGoal(this, 32.0D));
@@ -60,6 +63,10 @@ public class StalkerEntity extends Monster {
         if (this.blockManipulationCooldown > 0) {
             this.blockManipulationCooldown--;
         }
+
+        if (this.darkenCooldown > 0) {
+            this.darkenCooldown--;
+        }
     }
 
     @Override
@@ -78,6 +85,7 @@ public class StalkerEntity extends Monster {
 
         compound.putInt("VanishCooldown", this.vanishCooldown);
         compound.putInt("BlockManipulationCooldown", this.blockManipulationCooldown);
+        compound.putInt("DarkenCooldown", this.darkenCooldown);
 
         if (!this.stolenBlockItem.isEmpty()) {
             CompoundTag stolenBlockTag = new CompoundTag();
@@ -92,6 +100,7 @@ public class StalkerEntity extends Monster {
 
         this.vanishCooldown = compound.getInt("VanishCooldown");
         this.blockManipulationCooldown = compound.getInt("BlockManipulationCooldown");
+        this.darkenCooldown = compound.getInt("DarkenCooldown");
 
         if (compound.contains("StolenBlockItem")) {
             this.stolenBlockItem = ItemStack.of(compound.getCompound("StolenBlockItem"));
@@ -195,6 +204,64 @@ public class StalkerEntity extends Monster {
         }
 
         return true;
+    }
+
+    public boolean canDarkenArea() {
+        return this.darkenCooldown <= 0 && this.stolenBlockItem.isEmpty();
+    }
+
+    public void resetDarkenCooldown() {
+        this.darkenCooldown = 1200;
+    }
+
+    public BlockPos tryDarkenLightNearPlayer(ServerLevel serverLevel, Player player) {
+        BlockPos playerPos = player.blockPosition();
+
+        for (int attempt = 0; attempt < 32; attempt++) {
+            int xOffset = this.getRandom().nextInt(13) - 6;
+            int yOffset = this.getRandom().nextInt(7) - 3;
+            int zOffset = this.getRandom().nextInt(13) - 6;
+
+            BlockPos targetPos = playerPos.offset(xOffset, yOffset, zOffset);
+            BlockState state = serverLevel.getBlockState(targetPos);
+
+            if (!this.canRemoveLightBlock(state)) {
+                continue;
+            }
+
+            ItemStack lightItem = new ItemStack(state.getBlock().asItem());
+
+            if (!lightItem.isEmpty()) {
+                this.stolenBlockItem = lightItem;
+            }
+
+            serverLevel.levelEvent(2001, targetPos, net.minecraft.world.level.block.Block.getId(state));
+            serverLevel.setBlock(targetPos, Blocks.AIR.defaultBlockState(), 3);
+
+            return targetPos;
+        }
+
+        this.darkenCooldown = 300;
+        return null;
+    }
+
+    private boolean canRemoveLightBlock(BlockState state) {
+        if (state.isAir()) {
+            return false;
+        }
+
+        if (state.hasBlockEntity()) {
+            return false;
+        }
+
+        return state.is(Blocks.TORCH)
+                || state.is(Blocks.WALL_TORCH)
+                || state.is(Blocks.SOUL_TORCH)
+                || state.is(Blocks.SOUL_WALL_TORCH)
+                || state.is(Blocks.REDSTONE_TORCH)
+                || state.is(Blocks.REDSTONE_WALL_TORCH)
+                || state.is(Blocks.LANTERN)
+                || state.is(Blocks.SOUL_LANTERN);
     }
 
 }
