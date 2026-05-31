@@ -1,5 +1,6 @@
 package com.lenin.stalkerhorror.entity.ai;
 
+import com.lenin.stalkerhorror.util.PlayerLookUtils;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.monster.Monster;
@@ -7,39 +8,47 @@ import net.minecraft.world.entity.player.Player;
 
 import java.util.EnumSet;
 
-public class ObservePlayerGoal extends Goal {
+public class FreezeWhenSeenGoal extends Goal {
     private final Monster stalker;
-    private final double observeDistance;
+    private final double freezeDistance;
+    private final double lookThreshold;
     private Player targetPlayer;
 
-    public ObservePlayerGoal(Monster stalker, double observeDistance) {
+    public FreezeWhenSeenGoal(Monster stalker, double freezeDistance, double lookThreshold) {
         this.stalker = stalker;
-        this.observeDistance = observeDistance;
-        this.setFlags(EnumSet.of(Goal.Flag.LOOK));
+        this.freezeDistance = freezeDistance;
+        this.lookThreshold = lookThreshold;
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
     @Override
     public boolean canUse() {
         this.targetPlayer = this.stalker.level().getNearestPlayer(
                 TargetingConditions.forNonCombat()
-                        .range(this.observeDistance)
+                        .range(this.freezeDistance)
                         .selector(entity -> entity instanceof Player player && !player.isCreative() && !player.isSpectator()),
                 this.stalker
         );
 
-        return this.targetPlayer != null && this.stalker.hasLineOfSight(this.targetPlayer);
+        return this.targetPlayer != null
+                && PlayerLookUtils.isPlayerLookingAtEntity(this.targetPlayer, this.stalker, this.freezeDistance, this.lookThreshold);
     }
 
     @Override
     public boolean canContinueToUse() {
         return this.targetPlayer != null
                 && this.targetPlayer.isAlive()
-                && this.stalker.distanceTo(this.targetPlayer) <= this.observeDistance
-                && this.stalker.hasLineOfSight(this.targetPlayer);
+                && PlayerLookUtils.isPlayerLookingAtEntity(this.targetPlayer, this.stalker, this.freezeDistance, this.lookThreshold);
+    }
+
+    @Override
+    public void start() {
+        this.stalker.getNavigation().stop();
     }
 
     @Override
     public void tick() {
+        this.stalker.getNavigation().stop();
         this.stalker.getLookControl().setLookAt(this.targetPlayer, 30.0F, 30.0F);
     }
 
