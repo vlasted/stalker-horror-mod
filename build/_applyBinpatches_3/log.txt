@@ -1,0 +1,15 @@
+Java Launcher: C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot\bin\java.exe
+Arguments: '--clean, C:\Users\lenin\.gradle\caches\forge_gradle\mcp_repo\net\minecraft\joined\1.20.1-20230612.114412\joined-1.20.1-20230612.114412-srg.jar, --output, C:\Users\lenin\.gradle\caches\forge_gradle\minecraft_user_repo\net\minecraftforge\forge\1.20.1-47.4.10\forge-1.20.1-47.4.10-binpatched.jar, --apply, C:\Users\lenin\.gradle\caches\forge_gradle\minecraft_user_repo\net\minecraftforge\forge\1.20.1-47.4.10\forge-1.20.1-47.4.10-binpatches.lzma'
+Classpath:
+ - C:\Users\lenin\.gradle\caches\forge_gradle\maven_downloader\net\minecraftforge\binarypatcher\1.1.1\binarypatcher-1.1.1-fatjar.jar
+Working directory: C:\Users\lenin\stalker-horror-mod\build\_applyBinpatches_3
+Main class: net.minecraftforge.binarypatcher.ConsoleTool
+====================================
+Applying: 
+  Clean:     C:\Users\lenin\.gradle\caches\forge_gradle\mcp_repo\net\minecraft\joined\1.20.1-20230612.114412\joined-1.20.1-20230612.114412-srg.jar
+  Output:    C:\Users\lenin\.gradle\caches\forge_gradle\minecraft_user_repo\net\minecraftforge\forge\1.20.1-47.4.10\forge-1.20.1-47.4.10-binpatched.jar
+  KeepData:  false
+  Unpatched: false
+  Pack200:   false
+  Legacy:    false
+Loading patches file: C:\Users\lenin\.gradle\caches\forge_gradle\minecraft_user_repo\net\minecraftforge\forge\1.20.1-47.4.10\forge-1.20.1-47.4.10-binpatches.lzma
