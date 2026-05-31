@@ -1,5 +1,6 @@
 package com.lenin.stalkerhorror.entity;
 
+import com.lenin.stalkerhorror.entity.ai.DisturbDoorGoal;
 import com.lenin.stalkerhorror.entity.ai.ManipulateBlockGoal;
 import com.lenin.stalkerhorror.entity.ai.DarkenAreaGoal;
 import net.minecraft.core.BlockPos;
@@ -14,6 +15,11 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -40,6 +46,7 @@ public class StalkerEntity extends Monster {
     private int blockManipulationCooldown;
     private int darkenCooldown;
     private int creepySoundCooldown;
+    private int doorDisturbanceCooldown;
 
     public StalkerEntity(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
@@ -55,6 +62,7 @@ public class StalkerEntity extends Monster {
         this.goalSelector.addGoal(2, new FreezeWhenSeenGoal(this, 24.0D, 0.93D));
         this.goalSelector.addGoal(3, new CreepySoundGoal(this, 28.0D));
         this.goalSelector.addGoal(3, new DarkenAreaGoal(this, 18.0D));
+        this.goalSelector.addGoal(5, new DisturbDoorGoal(this, 18.0D));
         this.goalSelector.addGoal(3, new ManipulateBlockGoal(this, 18.0D));
         this.goalSelector.addGoal(3, new StalkPlayerGoal(this, 0.85D, 5.0D, 28.0D));
         this.goalSelector.addGoal(4, new ObservePlayerGoal(this, 32.0D));
@@ -82,6 +90,10 @@ public class StalkerEntity extends Monster {
         if (this.creepySoundCooldown > 0) {
             this.creepySoundCooldown--;
         }
+
+        if (this.doorDisturbanceCooldown > 0) {
+            this.doorDisturbanceCooldown--;
+        }
     }
 
     @Override
@@ -102,6 +114,7 @@ public class StalkerEntity extends Monster {
         compound.putInt("BlockManipulationCooldown", this.blockManipulationCooldown);
         compound.putInt("DarkenCooldown", this.darkenCooldown);
         compound.putInt("CreepySoundCooldown", this.creepySoundCooldown);
+        compound.putInt("DoorDisturbanceCooldown", this.doorDisturbanceCooldown);
 
         if (!this.stolenBlockItem.isEmpty()) {
             CompoundTag stolenBlockTag = new CompoundTag();
@@ -118,6 +131,7 @@ public class StalkerEntity extends Monster {
         this.blockManipulationCooldown = compound.getInt("BlockManipulationCooldown");
         this.darkenCooldown = compound.getInt("DarkenCooldown");
         this.creepySoundCooldown = compound.getInt("CreepySoundCooldown");
+        this.doorDisturbanceCooldown = compound.getInt("DoorDisturbanceCooldown");
 
         if (compound.contains("StolenBlockItem")) {
             this.stolenBlockItem = ItemStack.of(compound.getCompound("StolenBlockItem"));
@@ -392,6 +406,83 @@ public class StalkerEntity extends Monster {
             case 3 -> SoundEvents.ZOMBIE_AMBIENT;
             default -> SoundEvents.SKELETON_AMBIENT;
         };
+    }
+
+    public boolean canDisturbDoor() {
+        return this.doorDisturbanceCooldown <= 0;
+    }
+
+    public void resetDoorDisturbanceCooldown() {
+        this.doorDisturbanceCooldown = 500 + this.getRandom().nextInt(501);
+    }
+
+    public void setShortDoorDisturbanceCooldown() {
+        this.doorDisturbanceCooldown = 160;
+    }
+
+    public BlockPos tryDisturbDoorNearPlayer(ServerLevel serverLevel, Player player) {
+        BlockPos playerPos = player.blockPosition();
+
+        for (int attempt = 0; attempt < 48; attempt++) {
+            int xOffset = this.getRandom().nextInt(15) - 7;
+            int yOffset = this.getRandom().nextInt(7) - 3;
+            int zOffset = this.getRandom().nextInt(15) - 7;
+
+            BlockPos targetPos = playerPos.offset(xOffset, yOffset, zOffset);
+            BlockState state = serverLevel.getBlockState(targetPos);
+
+            if (!this.canDisturbOpenableBlock(state)) {
+                continue;
+            }
+
+            boolean currentOpen = state.getValue(BlockStateProperties.OPEN);
+            BlockState newState = state.setValue(BlockStateProperties.OPEN, !currentOpen);
+
+            serverLevel.setBlock(targetPos, newState, 3);
+            this.updateOtherDoorHalfIfNeeded(serverLevel, targetPos, state, !currentOpen);
+
+            return targetPos;
+        }
+
+        return null;
+    }
+
+    private boolean canDisturbOpenableBlock(BlockState state) {
+        if (state.isAir()) {
+            return false;
+        }
+
+        if (state.hasBlockEntity()) {
+            return false;
+        }
+
+        if (!state.hasProperty(BlockStateProperties.OPEN)) {
+            return false;
+        }
+
+        Block block = state.getBlock();
+
+        return block instanceof DoorBlock
+                || block instanceof TrapDoorBlock
+                || block instanceof FenceGateBlock;
+    }
+
+    private void updateOtherDoorHalfIfNeeded(ServerLevel serverLevel, BlockPos pos, BlockState state, boolean open) {
+        if (!(state.getBlock() instanceof DoorBlock)) {
+            return;
+        }
+
+        if (!state.hasProperty(BlockStateProperties.DOUBLE_BLOCK_HALF)) {
+            return;
+        }
+
+        DoubleBlockHalf half = state.getValue(BlockStateProperties.DOUBLE_BLOCK_HALF);
+        BlockPos otherPos = half == DoubleBlockHalf.LOWER ? pos.above() : pos.below();
+        BlockState otherState = serverLevel.getBlockState(otherPos);
+
+        if (otherState.getBlock() == state.getBlock() && otherState.hasProperty(BlockStateProperties.OPEN)) {
+            serverLevel.setBlock(otherPos, otherState.setValue(BlockStateProperties.OPEN, open), 3);
+        }
     }
 
 }
