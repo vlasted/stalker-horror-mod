@@ -1,7 +1,5 @@
 package com.lenin.stalkerhorror.event;
 
-import java.util.Comparator;
-import java.util.List;
 import com.lenin.stalkerhorror.StalkerHorrorMod;
 import com.lenin.stalkerhorror.entity.StalkerEntity;
 import com.lenin.stalkerhorror.registry.ModEntities;
@@ -23,7 +21,9 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.server.ServerLifecycleHooks;
 
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -110,13 +110,40 @@ public class StalkerSpawnHandler {
         }
     }
 
+    private static void cleanupExtraStalkersAroundPlayers(MinecraftServer server) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (player.isCreative() || player.isSpectator() || !player.isAlive()) {
+                continue;
+            }
+
+            ServerLevel serverLevel = player.serverLevel();
+            AABB searchArea = new AABB(player.blockPosition()).inflate(NEARBY_STALKER_RADIUS);
+
+            List<StalkerEntity> nearbyStalkers = serverLevel.getEntitiesOfClass(
+                    StalkerEntity.class,
+                    searchArea,
+                    StalkerEntity::isAlive
+            );
+
+            if (nearbyStalkers.size() <= 1) {
+                continue;
+            }
+
+            nearbyStalkers.sort(Comparator.comparingDouble(stalker -> stalker.distanceToSqr(player)));
+
+            for (int index = 1; index < nearbyStalkers.size(); index++) {
+                nearbyStalkers.get(index).discard();
+            }
+        }
+    }
+
     private static boolean hasNearbyStalker(ServerLevel serverLevel, ServerPlayer player) {
         AABB searchArea = new AABB(player.blockPosition()).inflate(NEARBY_STALKER_RADIUS);
 
         return !serverLevel.getEntitiesOfClass(
                 StalkerEntity.class,
                 searchArea,
-                stalker -> stalker.isAlive()
+                StalkerEntity::isAlive
         ).isEmpty();
     }
 
@@ -151,33 +178,6 @@ public class StalkerSpawnHandler {
         }
 
         return null;
-    }
-
-    private static void cleanupExtraStalkersAroundPlayers(MinecraftServer server) {
-        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            if (player.isCreative() || player.isSpectator() || !player.isAlive()) {
-                continue;
-            }
-
-            ServerLevel serverLevel = player.serverLevel();
-            AABB searchArea = new AABB(player.blockPosition()).inflate(NEARBY_STALKER_RADIUS);
-
-            List<StalkerEntity> nearbyStalkers = serverLevel.getEntitiesOfClass(
-                    StalkerEntity.class,
-                    searchArea,
-                    StalkerEntity::isAlive
-            );
-
-            if (nearbyStalkers.size() <= 1) {
-                continue;
-            }
-
-            nearbyStalkers.sort(Comparator.comparingDouble(stalker -> stalker.distanceToSqr(player)));
-
-            for (int index = 1; index < nearbyStalkers.size(); index++) {
-                nearbyStalkers.get(index).discard();
-            }
-        }
     }
 
     private static BlockPos findSafeGroundPosition(ServerLevel serverLevel, BlockPos basePos) {

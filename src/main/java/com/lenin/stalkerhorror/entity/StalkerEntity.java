@@ -4,6 +4,9 @@ import com.lenin.stalkerhorror.entity.ai.ManipulateBlockGoal;
 import com.lenin.stalkerhorror.entity.ai.DarkenAreaGoal;
 import net.minecraft.core.BlockPos;
 import com.lenin.stalkerhorror.entity.ai.CreepySoundGoal;
+import com.lenin.stalkerhorror.entity.ai.VanishWhenWatchedGoal;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -48,6 +51,7 @@ public class StalkerEntity extends Monster {
         this.goalSelector.addGoal(0, new FloatGoal(this));
 
         this.goalSelector.addGoal(1, new VanishWhenTooCloseGoal(this, 3.0D, 12.0D));
+        this.goalSelector.addGoal(2, new VanishWhenWatchedGoal(this, 26.0D, 0.96D, 60));
         this.goalSelector.addGoal(2, new FreezeWhenSeenGoal(this, 24.0D, 0.93D));
         this.goalSelector.addGoal(3, new CreepySoundGoal(this, 28.0D));
         this.goalSelector.addGoal(3, new DarkenAreaGoal(this, 18.0D));
@@ -225,6 +229,75 @@ public class StalkerEntity extends Monster {
 
     public void resetDarkenCooldown() {
         this.darkenCooldown = 1200;
+    }
+
+    public boolean tryRepositionNearPlayer(Player player, double minDistance, double maxDistance) {
+        if (!(this.level() instanceof ServerLevel serverLevel) || player == null) {
+            return false;
+        }
+
+        Vec3 look = player.getViewVector(1.0F).normalize();
+        Vec3 side = new Vec3(-look.z, 0.0D, look.x).normalize();
+
+        for (int attempt = 0; attempt < 24; attempt++) {
+            double distance = minDistance + this.getRandom().nextDouble() * (maxDistance - minDistance);
+            double sideOffset = (this.getRandom().nextDouble() - 0.5D) * 8.0D;
+
+            Vec3 basePosition = player.position()
+                    .subtract(look.scale(distance))
+                    .add(side.scale(sideOffset));
+
+            double y = player.getY() + this.getRandom().nextInt(5) - 2;
+
+            BlockPos safePosition = this.findSafeRepositionPosition(
+                    serverLevel,
+                    basePosition.x,
+                    y,
+                    basePosition.z
+            );
+
+            if (safePosition == null) {
+                continue;
+            }
+
+            this.teleportTo(
+                    safePosition.getX() + 0.5D,
+                    safePosition.getY(),
+                    safePosition.getZ() + 0.5D
+            );
+
+            this.getNavigation().stop();
+            this.getLookControl().setLookAt(player, 30.0F, 30.0F);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private BlockPos findSafeRepositionPosition(ServerLevel serverLevel, double x, double y, double z) {
+        BlockPos basePosition = BlockPos.containing(x, y, z);
+
+        for (int verticalOffset = 4; verticalOffset >= -5; verticalOffset--) {
+            BlockPos feetPosition = basePosition.offset(0, verticalOffset, 0);
+            BlockPos headPosition = feetPosition.above();
+            BlockPos floorPosition = feetPosition.below();
+
+            boolean hasFloor = serverLevel.getBlockState(floorPosition)
+                    .isFaceSturdy(serverLevel, floorPosition, Direction.UP);
+
+            boolean hasSpace = serverLevel.getBlockState(feetPosition).isAir()
+                    && serverLevel.getBlockState(headPosition).isAir();
+
+            boolean hasNoFluid = serverLevel.getBlockState(feetPosition).getFluidState().isEmpty()
+                    && serverLevel.getBlockState(headPosition).getFluidState().isEmpty();
+
+            if (hasFloor && hasSpace && hasNoFluid) {
+                return feetPosition;
+            }
+        }
+
+        return null;
     }
 
     public BlockPos tryDarkenLightNearPlayer(ServerLevel serverLevel, Player player) {
